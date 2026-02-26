@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build
+dist/
+client/dist/
+server/dist/
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+server/.env
+
+# IDE / OS
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
+
+# Optional
+server/scripts/ngrok.exe
+*.local

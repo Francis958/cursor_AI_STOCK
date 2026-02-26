@@ -1,0 +1,11 @@
+{
+  "name": "期权仪表盘",
+  "short_name": "期权",
+  "description": "期权数据与多智能体分析",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "lang": "zh-CN"
+}

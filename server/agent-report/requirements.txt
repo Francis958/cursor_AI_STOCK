@@ -1,0 +1,4 @@
+# TradingAgents 从 GitHub 安装（会拉取依赖）
+# 执行: pip install -r server/agent-report/requirements.txt
+# 若安装失败，可改为克隆仓库后在该目录内执行: pip install -r requirements.txt
+git+https://github.com/TauricResearch/TradingAgents.git
