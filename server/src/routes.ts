@@ -8,7 +8,7 @@ import { buildDashboardData } from './calculations.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
 const AGENT_REPORT_SCRIPT = path.join(__dirname, '..', 'agent-report', 'run_report.py');
-const AGENT_REPORT_TIMEOUT_MS = 600000; // 10 min（多智能体 + 多轮辩论较耗时）
+const AGENT_REPORT_TIMEOUT_MS = 20 * 60 * 1000; // 20 min（多智能体 + 多轮辩论较耗时）
 
 /** 按标的缓存最近一次成功报告，便于超时/刷新后「获取上次报告」 */
 const lastAgentReportBySymbol: Record<string, unknown> = {};
