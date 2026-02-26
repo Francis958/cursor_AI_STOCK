@@ -89,7 +89,7 @@ export interface AgentReportResponse {
   detail?: string;
 }
 
-const AGENT_REPORT_FETCH_TIMEOUT_MS = 9 * 60 * 1000; // 9 分钟，略小于服务端 10 分钟
+const AGENT_REPORT_FETCH_TIMEOUT_MS = 18 * 60 * 1000; // 18 分钟，略小于服务端 20 分钟（多分析师+辩论较耗时）
 
 export async function fetchAgentReport(body: AgentReportRequest): Promise<AgentReportResponse> {
   const ac = new AbortController();
@@ -106,7 +106,7 @@ export async function fetchAgentReport(body: AgentReportRequest): Promise<AgentR
     return data;
   } catch (e) {
     if ((e as Error).name === 'AbortError') {
-      throw new Error('请求超时（约 9 分钟）。请减少辩论轮次或分析师后重试；若后端已生成，可点击「获取上次报告」。');
+      throw new Error('请求超时（约 18 分钟）。请减少辩论轮次或分析师后重试；若后端已生成，可点击「获取上次报告」查看。');
     }
     throw e;
   } finally {
