@@ -48,7 +48,7 @@ export default function IvSmileComparison({ data }: IvSmileComparisonProps) {
             <XAxis dataKey="strike" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v + '%'} domain={['auto', 'auto']} />
             <Tooltip
-              formatter={(v: number | null) => (v != null ? v.toFixed(2) + '%' : '—')}
+              formatter={(v: unknown) => (v != null && typeof v === 'number' ? v.toFixed(2) + '%' : '—')}
               labelFormatter={(label) => `行权价 ${label}`}
             />
             <Legend />
