@@ -64,6 +64,7 @@ router.post('/api/agent-report', (req, res) => {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PYTHONIOENCODING: 'utf-8', // 避免 Windows 下中文错误信息乱码
+    PYTHONUNBUFFERED: '1',    // 避免 Python 缓冲 stdout，便于从夹杂库日志中解析最后一行 JSON
     AGENT_SYMBOL: sym,
     AGENT_DATE: (tradeDate || '').toString().trim() || undefined,
     AGENT_SELECTED_ANALYSTS: Array.isArray(selectedAnalysts)
@@ -97,12 +98,35 @@ router.post('/api/agent-report', (req, res) => {
     py.kill('SIGTERM');
   }, AGENT_REPORT_TIMEOUT_MS);
 
+  /** 从可能夹杂日志的 stdout 中提取最后一段合法 JSON（Agent 只应最后 print 一行 JSON） */
+  function extractAgentJson(raw: string): unknown {
+    const trimmed = raw.trim();
+    if (!trimmed) throw new Error('Agent 无输出');
+    const lines = trimmed.split('\n').filter((s) => s.trim());
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (!line.startsWith('{')) continue;
+      try {
+        return JSON.parse(line) as unknown;
+      } catch {
+        continue;
+      }
+    }
+    const lastBrace = trimmed.lastIndexOf('{');
+    if (lastBrace >= 0) {
+      try {
+        return JSON.parse(trimmed.slice(lastBrace)) as unknown;
+      } catch {
+        // fall through
+      }
+    }
+    throw new SyntaxError('未找到合法 JSON 行，可能被库的 stdout 日志打断。请确保 run_report.py 仅用 print(json.dumps(...)) 输出一行。');
+  }
+
   py.on('close', (code) => {
     clearTimeout(timer);
     try {
-      const lines = stdout.trim().split('\n').filter((s) => s.trim());
-      const line = lines.reverse().find((s) => s.trim().startsWith('{')) || lines[0] || stdout.trim();
-      const data = JSON.parse(line);
+      const data = extractAgentJson(stdout) as { ok?: boolean; error?: string; detail?: string };
       if (data.ok === true) {
         lastAgentReportBySymbol[sym] = data;
         return res.json(data);
@@ -110,9 +134,10 @@ router.post('/api/agent-report', (req, res) => {
       return res.status(500).json({ error: data.error || '报告生成失败', detail: data.detail });
     } catch (e) {
       const err = (e as Error).message;
+      const isJsonError = e instanceof SyntaxError || err.includes('JSON') || err.includes('Unexpected');
       return res.status(500).json({
-        error: 'TradingAgents 未安装或脚本执行失败。请参阅 server/agent-report/README.md 配置 Python 与 TradingAgents。',
-        detail: stderr || err,
+        error: isJsonError ? 'Agent 返回内容不是合法 JSON（unexpected format）。可能被进度/日志打断，请查看后端 stderr。' : 'TradingAgents 未安装或脚本执行失败。请参阅 server/agent-report/README.md 配置 Python 与 TradingAgents。',
+        detail: stderr ? `${stderr.slice(-2000)}` : err,
       });
     }
   });

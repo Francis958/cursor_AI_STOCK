@@ -2,6 +2,7 @@
 """
 TradingAgents 桥接脚本：接收标的与可选配置，运行多智能体报告，向 stdout 输出 JSON。
 供 Node 后端 spawn 调用。需先安装 TradingAgents 或设置 TRADINGAGENT_REPO_PATH。
+直接运行时可从 server/.env 或本目录 .env 加载 OPENAI_API_KEY 等（仅当未设置时补全）。
 """
 import json
 import os
@@ -13,6 +14,28 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
+
+
+def _load_dotenv_if_needed():
+    """直接运行脚本时加载 .env（OPENAI_API_KEY、AGENT_SYMBOL 等）。Node spawn 时已传 env，不会依赖此逻辑。"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    for rel in (os.path.join(script_dir, ".env"), os.path.join(script_dir, "..", ".env")):
+        if not os.path.isfile(rel):
+            continue
+        try:
+            with open(rel, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k and not os.environ.get(k):
+                            os.environ[k] = v
+        except Exception:
+            pass
 
 
 def _serialize(obj):
@@ -33,6 +56,7 @@ def _serialize(obj):
 
 
 def main():
+    _load_dotenv_if_needed()
     # 从环境变量或命令行取参数
     symbol = os.environ.get("AGENT_SYMBOL", "").strip().upper()
     date_str = os.environ.get("AGENT_DATE", "").strip()
@@ -73,6 +97,7 @@ def main():
             "detail": str(e),
         }
         print(json.dumps(out, ensure_ascii=False))
+        sys.stdout.flush()
         sys.exit(1)
 
     config = DEFAULT_CONFIG.copy()
@@ -115,6 +140,7 @@ def main():
             "date": date_str,
         }
         print(json.dumps(out, ensure_ascii=False, default=str))
+        sys.stdout.flush()
         sys.exit(1)
 
     # 摘要报告（截断过长内容便于前端展示）
@@ -144,6 +170,7 @@ def main():
         "final_trade_decision": _serialize(final_state.get("final_trade_decision")),
     }
     print(json.dumps(out, ensure_ascii=False, default=str))
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
